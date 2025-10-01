@@ -1,5 +1,4 @@
 import osmnx as ox
-import osmnx.utils_graph
 import networkx as nx
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
@@ -66,7 +65,7 @@ def create_graph(orig_address, dest_address, route_type):
   
   # Cria o grafo da área ao redor do ponto central
   # A distância (dist) é em metros
-  graph = ox.graph_from_point(center, dist=2000, network_type=route_type, simplify=True)
+  graph = ox.graph_from_point(center, dist=10000, network_type=route_type, simplify=True)
   
   return graph, orig_coords, dest_coords, center
 
@@ -118,9 +117,31 @@ def plot_route(graph, route, orig_coords, dest_coords, center):
       sp = data.get('speed_kph', DEFAULT_KPH)
       data['travel_time'] = float(length_m * 3.6 / float(sp))
   
+  # Helper local para obter atributos das arestas da rota (substitui utils_graph.get_route_edge_attributes)
+  def get_route_edge_attributes(G, route_nodes, attr):
+    valores = []
+    for u, v in zip(route_nodes[:-1], route_nodes[1:]):
+      # Pode haver múltiplas arestas paralelas (multidigraph)
+      if G.has_edge(u, v):
+        edge_data = G.get_edge_data(u, v)
+        # edge_data é um dict (key->data) em MultiDiGraph
+        if isinstance(edge_data, dict):
+          # pega a primeira variante que tiver o atributo
+            # garante ordem estável
+          for k in sorted(edge_data.keys()):
+            data = edge_data[k]
+            if attr in data:
+              valores.append(data[attr])
+              break
+        else:
+          # Graph simples
+          if attr in edge_data:
+            valores.append(edge_data[attr])
+    return valores
+
   # Calcula o comprimento total da rota (em metros) e o tempo estimado de viagem (em segundos)
-  route_length = sum(ox.utils_graph.get_route_edge_attributes(graph, route, 'length'))
-  route_time = sum(ox.utils_graph.get_route_edge_attributes(graph, route, 'travel_time'))
+  route_length = sum(get_route_edge_attributes(graph, route, 'length'))
+  route_time = sum(get_route_edge_attributes(graph, route, 'travel_time'))
   
   # Gera uma lista de coordenadas (latitude, longitude) para cada nó na rota
   route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
@@ -138,6 +159,6 @@ def plot_route(graph, route, orig_coords, dest_coords, center):
     icon=folium.DivIcon(html=f"<div style='font-size:12px;background:white;padding:4px;border-radius:4px;'>"
                         f"Dist: {route_length:.0f} m • Tempo: {route_time/60:.1f} min</div>")
   )
-
+  
   map.save("route_map.html")
   print("Mapa salvo como 'route_map.html'")
