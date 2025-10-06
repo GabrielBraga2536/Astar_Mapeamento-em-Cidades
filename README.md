@@ -1,1 +1,45 @@
-# Busca-A-_Mapeamento-em-Cidades
+# A* Mapeamento em Cidades
+
+Experimento de roteamento com OSMnx + NetworkX, exibido em uma interface Pygame com visual inspirado no Waze (tema escuro, vias com contorno, rota azul destacada, barra superior e painel inferior com estatísticas).
+
+## Requisitos
+
+- Python 3.12+
+- Dependências em `requirements.txt`
+
+## Instalação
+
+```bash
+pip install -r requirements.txt
+```
+
+Se estiver no Windows e o Pygame reclamar do `pkg_resources`, é apenas um aviso de depreciação do setuptools, pode ser ignorado.
+
+## Como executar
+
+```bash
+python teste_pygame.py
+```
+
+O script geocodifica origem e destino em Tampa, FL, constrói o grafo de vias, calcula a rota por A*, e renderiza a navegação em uma janela Pygame.
+
+## Teclado
+
+- + / =: Zoom in
+- -: Zoom out
+- Setas ou WASD: Pan (arrastar o mapa)
+- C: Centralizar a câmera no veículo
+- ESC: Sair
+
+### Mouse
+
+- Botão esquerdo pressionado + arrastar: Pan
+- Roda do mouse: Zoom ancorado no cursor
+
+## Notas
+
+- A barra superior mostra uma caixa de busca fictícia com o título da rota. O painel inferior exibe ETA e distância total, além de estatísticas da rota.
+- As ruas são desenhadas com “casing” (contorno) e interior claro para melhor contraste no tema escuro; a rota ativa aparece em azul com contorno claro.
+- A espessura e a densidade das vias se ajustam ao nível de zoom (LOD) para reduzir sobreposição quando afastado.
+- A orientação do veículo é suavizada (lookahead + interpolação) para evitar oscilações bruscas.
+- Endereços de origem/destino podem ser alterados no início do `teste_pygame.py`.
