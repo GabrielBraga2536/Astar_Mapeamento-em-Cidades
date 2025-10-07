@@ -18,10 +18,8 @@ Se estiver no Windows e o Pygame reclamar do `pkg_resources`, é apenas um aviso
 ## Como executar
 
 ```bash
-python teste_pygame.py
+python main.py
 ```
-
-O script geocodifica origem e destino em Tampa, FL, constrói o grafo de vias, calcula a rota por A*, e renderiza a navegação em uma janela Pygame.
 
 ## Teclado
 
