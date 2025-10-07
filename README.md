@@ -1,6 +1,6 @@
 # A* Mapeamento em Cidades
 
-Experimento de roteamento com OSMnx + NetworkX, exibido em uma interface Pygame com visual inspirado no Waze (tema escuro, vias com contorno, rota azul destacada, barra superior e painel inferior com estatísticas).
+Projeto de pathfinding com OSMnx + NetworkX, exibido em uma interface Pygame.
 
 ## Requisitos
 

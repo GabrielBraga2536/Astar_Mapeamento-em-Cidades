@@ -1,3 +1,4 @@
+import os
 import math
 import osmnx as ox
 import networkx as nx
@@ -11,11 +12,28 @@ from pygame.locals import (
 
 ox.config(use_cache=True, log_console=False)
 
+# Parâmetros do raio do grafo (área do mapa)
+# Ajuste aqui conforme preferir: fator proporcional, margem fixa e limites para performance
+RADIUS_FACTOR = 0.5       # fração da distância O-D usada no raio 
+RADIUS_MARGIN_M = 1500.0  # margem extra em metros 
+RADIUS_MIN = 2000.0       # raio mínimo 
+RADIUS_MAX = 15000.0      # raio máximo 
+
 #* Geocoding
-# Utiliza o Nominatim (OpenStreetMap) para converter endereços em coordenadas (lat, lon)
+# Utiliza o Nominatim (OpenStreetMap) do geopy para converter endereços em coordenadas (lat, lon)
 geolocator = Nominatim(user_agent="rota_pygame_app")
-orig_address = "4100 George J. Bean Pkwy, Tampa, FL 33607"
-dest_address = "3001 W Dr Martin Luther King Jr Blvd, Tampa, FL 33607"
+
+#? Debug 1 - Endereços dos Estados Unidos
+# orig_address = "4100 George J. Bean Pkwy, Tampa, FL 33607"
+# dest_address = "3001 W Dr Martin Luther King Jr Blvd, Tampa, FL 33607"
+
+#? Debug 2 - Endereços do Brasil
+# orig_address = "Rua Visconde de Faria, 250, Santos, Brazil"
+# dest_address = "Rua Bolívia, 89, Santos, Brazil"
+
+os.system('cls') # Limpa o terminal para o usuário inserir os endereços
+orig_address = input("Endereço de origem: ")
+dest_address = input("Endereço de destino: ")
 
 # O  geolocator funciona via requests HTTP, então cuidado com limites de uso
 # (veja https://nominatim.org/release-docs/latest/api/Overview/)
@@ -30,9 +48,18 @@ if not loc_o or not loc_d:
 orig_point = (loc_o.latitude, loc_o.longitude)
 dest_point = (loc_d.latitude, loc_d.longitude)
 
-# ---------- 2) Get graph and route ----------
+#* Grafo e rota
+# Centraliza o grafo no ponto médio entre origem e destino
 center = ((orig_point[0] + dest_point[0]) / 2, (orig_point[1] + dest_point[1]) / 2)
-G = ox.graph_from_point(center, dist=3000, network_type='drive')
+
+# calcula distância (em metros) entre origem e destino e usa isso para dimensionar o raio
+od_dist_m = ox.distance.great_circle(orig_point[0], orig_point[1], dest_point[0], dest_point[1])
+
+# raio proporcional + margem e clamp entre mínimos/máximos
+base_radius = od_dist_m * RADIUS_FACTOR + RADIUS_MARGIN_M
+radius = max(RADIUS_MIN, min(base_radius, RADIUS_MAX))
+
+G = ox.graph_from_point(center, dist=radius, network_type='drive')
 G = ox.add_edge_speeds(G)
 G = ox.add_edge_travel_times(G)
 
@@ -43,7 +70,7 @@ dest_node = ox.distance.nearest_nodes(G, dest_point[1], dest_point[0])
 def heuristic(u, v):
   y1, x1 = G.nodes[u]['y'], G.nodes[u]['x']
   y2, x2 = G.nodes[v]['y'], G.nodes[v]['x']
-  return ox.distance.great_circle_vec(y1, x1, y2, x2)
+  return ox.distance.great_circle(y1, x1, y2, x2)
 
 path = nx.astar_path(G, orig_node, dest_node, heuristic=heuristic, weight='length')
 
@@ -74,7 +101,7 @@ COL_TEXT = (230, 230, 235)
 COL_MUTED = (140, 145, 155)
 COL_START = (0, 210, 120)
 COL_END = (235, 70, 70)
-COL_VEHICLE = (70, 180, 255)
+COL_VEHICLE = (100, 40, 150)
 
 def compute_transform(minx, maxx, miny, maxy, screen_w, screen_h, margin):
   width = maxx - minx
@@ -133,7 +160,7 @@ route_screen_base = [proj_fn(pt) for pt in route_xy]
 # ---------- 5) Pygame visualization + simple animation ----------
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-pygame.display.set_caption("Rota (A*) - Pygame + OSMnx")
+pygame.display.set_caption("Rota (A*)")
 clock = pygame.time.Clock()
 font_small = pygame.font.SysFont(None, 18)
 font = pygame.font.SysFont(None, 22)
@@ -308,6 +335,10 @@ while running:
         # resolver offset para que apply_camera(vx,vy) == (cx,cy)
         cam_off_x = cx - (vx - cx) * cam_zoom - cx
         cam_off_y = cy - (vy - cy) * cam_zoom - cy
+      # Reiniciar animação (replay)
+      if event.key == pygame.K_r:
+        pos_index = 0
+        curr_heading = None
     # Mouse drag pan
     if event.type == MOUSEBUTTONDOWN and event.button == 1:
       dragging = True
@@ -388,7 +419,7 @@ while running:
   stats = [
     f"{fmt_eta(total_time_s)} • {fmt_km(total_len_m)}",
     f"Nós da rota: {len(path)}  •  Passos: {pos_index}/{len(route_densified_screen_base)}",
-    "Controles: +/- zoom  •  Setas/WASD pan  •  C centralizar"
+    "Controles: +/- zoom  •  Setas/WASD pan  •  C centralizar  •  R reiniciar"
   ]
   draw_bottom_sheet(screen, stats)
 
